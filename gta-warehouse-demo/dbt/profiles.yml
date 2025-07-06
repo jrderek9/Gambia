@@ -1,0 +1,13 @@
+gta_demo:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: postgres
+      port: 5432
+      user: gta_admin
+      pass: gta_secure_pass
+      dbname: gta_warehouse
+      schema: analytics
+      threads: 4
+      keepalives_idle: 0

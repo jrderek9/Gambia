@@ -1,0 +1,82 @@
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Data files
+data/*.csv
+data/*.json
+data/*.xlsx
+data/*.parquet
+
+# Logs
+logs/
+*.log
+airflow/logs/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+*.ipynb
+
+# ML Models
+models/*.pkl
+models/*.joblib
+models/*.h5
+
+# Database
+*.db
+*.sqlite
+postgres_data/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# dbt
+dbt/target/
+dbt/dbt_packages/
+dbt/logs/
+
+# Metabase
+metabase.db/
+metabase-data/
+
+# Airflow
+airflow/airflow.db
+airflow/airflow-webserver.pid
+airflow/standalone_admin_password.txt
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+tmp/
+temp/
+
+# Secrets
+*.pem
+*.key
+*.crt
+secrets/

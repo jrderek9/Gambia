@@ -1,0 +1,78 @@
+version: 2
+
+sources:
+  - name: raw
+    database: gta_warehouse
+    schema: raw
+    tables:
+      - name: taxpayers
+        columns:
+          - name: taxpayer_id
+            tests:
+              - unique
+              - not_null
+          - name: tin
+            tests:
+              - unique
+              - not_null
+      - name: paye_returns
+        columns:
+          - name: return_id
+            tests:
+              - unique
+              - not_null
+          - name: taxpayer_id
+            tests:
+              - not_null
+              - relationships:
+                  to: source('raw', 'taxpayers')
+                  field: taxpayer_id
+      - name: vat_returns
+        columns:
+          - name: return_id
+            tests:
+              - unique
+              - not_null
+          - name: taxpayer_id
+            tests:
+              - not_null
+              - relationships:
+                  to: source('raw', 'taxpayers')
+                  field: taxpayer_id
+      - name: payments
+        columns:
+          - name: payment_id
+            tests:
+              - unique
+              - not_null
+          - name: taxpayer_id
+            tests:
+              - not_null
+      - name: corporate_tax
+      - name: companies_registry
+      - name: vehicle_registry
+      - name: land_registry
+      - name: regions
+
+models:
+  - name: stg_taxpayers
+    description: "Staging layer for taxpayer data"
+    columns:
+      - name: taxpayer_id
+        description: "Unique identifier for taxpayer"
+        tests:
+          - unique
+          - not_null
+      - name: compliance_score
+        description: "Compliance score between 0 and 1"
+        tests:
+          - not_null
+          
+  - name: stg_paye_returns
+    description: "Staging layer for PAYE returns"
+    
+  - name: stg_vat_returns
+    description: "Staging layer for VAT returns"
+    
+  - name: stg_payments
+    description: "Staging layer for payment transactions"

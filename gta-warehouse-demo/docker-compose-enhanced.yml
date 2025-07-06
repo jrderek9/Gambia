@@ -1,0 +1,99 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: gta_postgres
+    environment:
+      POSTGRES_DB: gta_warehouse
+      POSTGRES_USER: gta_admin
+      POSTGRES_PASSWORD: gta_secure_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - gta_network
+
+  metabase:
+    image: metabase/metabase:latest
+    container_name: gta_metabase
+    depends_on:
+      - postgres
+    ports:
+      - "3000:3000"
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: gta_warehouse
+      MB_DB_PORT: 5432
+      MB_DB_USER: gta_admin
+      MB_DB_PASS: gta_secure_pass
+      MB_DB_HOST: postgres
+    networks:
+      - gta_network
+
+  luigi:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.luigi
+    container_name: gta_luigi
+    depends_on:
+      - postgres
+    ports:
+      - "8082:8082"
+    volumes:
+      - ./luigi:/usr/app/luigi
+      - ./scripts:/usr/app/scripts
+      - ./data:/usr/app/data
+      - ./ml:/usr/app/ml
+      - ./dbt:/usr/app/dbt
+    environment:
+      PYTHONPATH: /usr/app
+      LUIGI_CONFIG_PATH: /usr/app/luigi/luigi.cfg
+    networks:
+      - gta_network
+    command: luigid
+
+  dbt:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dbt
+    container_name: gta_dbt
+    depends_on:
+      - postgres
+    volumes:
+      - ./dbt:/usr/app/dbt
+      - ./data:/usr/app/data
+      - ./scripts:/usr/app/scripts
+    environment:
+      DBT_PROFILES_DIR: /usr/app/dbt
+    networks:
+      - gta_network
+    command: tail -f /dev/null
+
+  streamlit:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.streamlit
+    container_name: gta_streamlit
+    depends_on:
+      - postgres
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./streamlit:/usr/app/streamlit
+      - ./ml:/usr/app/ml
+      - ./data:/usr/app/data
+    environment:
+      PYTHONPATH: /usr/app
+    networks:
+      - gta_network
+    command: streamlit run /usr/app/streamlit/app.py --server.port=8501 --server.address=0.0.0.0
+
+volumes:
+  postgres_data:
+
+networks:
+  gta_network:
+    driver: bridge

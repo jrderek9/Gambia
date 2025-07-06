@@ -1,0 +1,125 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: gta_postgres
+    environment:
+      POSTGRES_DB: gta_warehouse
+      POSTGRES_USER: gta_admin
+      POSTGRES_PASSWORD: gta_secure_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - gta_network
+
+  airflow-webserver:
+    image: apache/airflow:2.7.3-python3.9
+    container_name: gta_airflow_webserver
+    depends_on:
+      - postgres
+      - airflow-init
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://gta_admin:gta_secure_pass@postgres/gta_warehouse
+      AIRFLOW__CORE__FERNET_KEY: 'zp8kV5T8vfKs0BDVQbVEVxyh6Rlb2MgcBH3SPBlttJA='
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
+      AIRFLOW__WEBSERVER__WARN_DEPLOYMENT_EXPOSURE: 'false'
+      AIRFLOW__WEBSERVER__SECRET_KEY: 'THIS_IS_A_SECRET_KEY_FOR_DEMO_ONLY'
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./scripts:/opt/airflow/scripts
+      - ./data:/opt/airflow/data
+    ports:
+      - "8080:8080"
+    command: webserver
+    networks:
+      - gta_network
+
+  airflow-scheduler:
+    image: apache/airflow:2.7.3-python3.9
+    container_name: gta_airflow_scheduler
+    depends_on:
+      - postgres
+      - airflow-init
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://gta_admin:gta_secure_pass@postgres/gta_warehouse
+      AIRFLOW__CORE__FERNET_KEY: 'zp8kV5T8vfKs0BDVQbVEVxyh6Rlb2MgcBH3SPBlttJA='
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./scripts:/opt/airflow/scripts
+      - ./data:/opt/airflow/data
+    command: scheduler
+    networks:
+      - gta_network
+
+  airflow-init:
+    image: apache/airflow:2.7.3-python3.9
+    container_name: gta_airflow_init
+    depends_on:
+      - postgres
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://gta_admin:gta_secure_pass@postgres/gta_warehouse
+      AIRFLOW__CORE__FERNET_KEY: 'zp8kV5T8vfKs0BDVQbVEVxyh6Rlb2MgcBH3SPBlttJA='
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+    entrypoint: /bin/bash
+    command: -c "airflow db init && airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@gta.gm"
+    networks:
+      - gta_network
+
+  metabase:
+    image: metabase/metabase:latest
+    container_name: gta_metabase
+    depends_on:
+      - postgres
+    ports:
+      - "3000:3000"
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: gta_warehouse
+      MB_DB_PORT: 5432
+      MB_DB_USER: gta_admin
+      MB_DB_PASS: gta_secure_pass
+      MB_DB_HOST: postgres
+    networks:
+      - gta_network
+
+  dbt:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dbt
+    container_name: gta_dbt
+    depends_on:
+      - postgres
+    volumes:
+      - ./dbt:/usr/app/dbt
+      - ./data:/usr/app/data
+    environment:
+      DBT_PROFILES_DIR: /usr/app/dbt
+    networks:
+      - gta_network
+    command: tail -f /dev/null
+
+volumes:
+  postgres_data:
+
+networks:
+  gta_network:
+    driver: bridge
